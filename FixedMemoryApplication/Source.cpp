@@ -1,54 +1,66 @@
 #include <stdio.h>
+#include <iostream>
 #include <Windows.h>
+#include <iomanip>
 
 #define DESIRED_ADDRESS (PVOID)0x00'00'00'20'00'00'00'00
 
-int main()
+template <typename T>
+void PerformOutput(T value)
 {
-	SetConsoleTitleW(L"FixedCodeApplication");
-
-	printf("ProcessId: %d, Pointer: %p, Size: %d\n",
-		GetCurrentProcessId(),
+	T* pValue = (T*)VirtualAlloc(
 		DESIRED_ADDRESS,
-		sizeof(DWORD));
-
-	PDWORD pValue = (PDWORD)VirtualAlloc(
-		DESIRED_ADDRESS,
-		sizeof(DWORD),
+		sizeof(T),
 		MEM_COMMIT | MEM_RESERVE,
 		PAGE_READWRITE);
 	if (pValue == NULL) {
-		printf("ERROR, can't allocated desired address %p\n", DESIRED_ADDRESS);
-		exit(1);
+		throw std::runtime_error("Can't allocated desired address");
 	}
-	*pValue = 515;
+	*pValue = value;
 
 	while (TRUE) {
-		printf("[%p]: *pValue: %d\n", pValue, *pValue);
-		//Sleep(1000);
-		getchar();
+		std::cout << "[0x" << std::hex << pValue << "]: " << std::fixed << std::setprecision(2)
+			<< *pValue << std::endl;
+		std::cin.get();
 		(*pValue)--;
 	}
+}
 
-	/*
-	DWORD value = 616;
-	while (TRUE) {
-		printf("[%p]: value: %d\n", &value, value);
-		getchar();
-		value--;
+int main(int argc, CHAR* argv[])
+{
+	try {
+		if (argc < 2) {
+			throw std::runtime_error("Required command-line arguments are not specified");
+		}
+
+		SetConsoleTitleW(L"FixedMemoryApplication");
+
+		printf("ProcessId Pointer, Size\n");
+		printf("%d 0x%p %d\n",
+			GetCurrentProcessId(),
+			DESIRED_ADDRESS,
+			sizeof(DWORD));
+		puts("");
+
+		if (strcmp(argv[1], "int32") == 0) {
+			PerformOutput<INT32>(515);
+		}
+		else if (strcmp(argv[1], "int64") == 0) {
+			PerformOutput<INT64>(616);
+		}
+		else if (strcmp(argv[1], "float") == 0) {
+			PerformOutput<FLOAT>(3.66);
+		}
+		else if (strcmp(argv[1], "double") == 0) {
+			PerformOutput<DOUBLE>(4.76);
+		}
+		else {
+			throw std::runtime_error("Specified type is invalid");
+		}
 	}
-	*/
-
-	/*
-	PDWORD pValue = (PDWORD)malloc(sizeof(DWORD));
-	*pValue = 717;
-
-	while (TRUE) {
-		printf("[%p]: *pValue: %d\n", pValue, *pValue);
-		getchar();
-		(*pValue)--;
+	catch (std::exception& ex) {
+		std::cout << ex.what() << std::endl;
 	}
-	*/
 
 	return EXIT_SUCCESS;
 }
